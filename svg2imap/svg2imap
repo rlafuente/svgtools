@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+
+import pathtools as pt
+import svgop
+import sys
+
+def getCoords(svgdata):
+    coords = []
+    pathdata = pt.parsePath(svgdata)
+    for segment in pathdata:
+        cmd = segment[0]
+        points = segment[1]
+        if cmd in 'ML':
+            x, y = points
+        elif cmd == 'C':
+            x, y = points[4:6]
+        elif cmd == 'Z':
+            pass
+        else:
+            raise ValueError('Unknown SVG command: "%s"' % cmd)
+        point = (int(x), int(y))
+        coords.append(point)
+        
+    coordstring = ''
+    for xy in coords:
+        x, y = xy
+        coordstring += '%i,%i, ' % (x,y)
+    
+    coordstring.strip(' ,')
+    return coordstring
+    
+
+svgfile = sys.argv[1]
+tree = svgop.openTree(svgfile)
+matches = svgop.traverseTree(tree)
+
+html = '<html>\n<body>\n'
+html += '<MAP NAME="map1">\n'
+
+for item in matches:
+    name, d = item
+    data = getCoords(d)
+    html += '<AREA\n'    
+    html += '   HREF="%s.html" ALT="%s" TITLE="%s"\n' % (name, name.capitalize(), name.capitalize())
+    html += '   SHAPE=POLY COORDS="%s">\n' % data
+
+html += '</MAP>\n'
+html += '<IMG SRC="%s" ALT="mapa" USEMAP="#map1">\n' % svgfile.replace('svg','png')
+
+html += '</body>\n</html>\n'
+
+print html
